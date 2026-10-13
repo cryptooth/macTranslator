@@ -1,0 +1,16 @@
+# Derleme çıktıları
+build/
+dist/
+*.zip
+*.dmg
+
+# macOS
+.DS_Store
+._*
+
+# Xcode / SwiftPM (açılırsa)
+.build/
+.swiftpm/
+DerivedData/
+xcuserdata/
+*.xcuserstate
