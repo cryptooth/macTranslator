@@ -25,11 +25,23 @@ Translation framework or Apple Intelligence. Nothing is sent to any server.*
 - Xcode veya Command Line Tools (derlemek için)
 - Apple Intelligence motoru için: macOS 26+, Apple Silicon, Apple Intelligence açık
 
-## Kurulum (kendi Mac'inde)
+## İndir
+
+En son imzalı ve Apple tarafından onaylanmış (notarized) sürüm:
+**[Releases → Translator.zip](https://github.com/cryptooth/macTranslator/releases/latest)**
+
+Zip'i açın, `Translator.app`'i **Uygulamalar** klasörüne sürükleyin ve açın.
+Apple Silicon ve Intel Mac'lerde çalışır (macOS 15+).
+
+## Kaynaktan derleme
 
 ```bash
 git clone https://github.com/cryptooth/macTranslator.git
+<<<<<<< HEAD
 cd Translator
+=======
+cd macTranslator
+>>>>>>> 02a9bbd (README: indirme bölümü ve repo bağlantısı)
 ./build.sh install      # derler, /Applications'a kopyalar ve başlatır
 ```
 
