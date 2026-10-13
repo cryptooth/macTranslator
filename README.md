@@ -27,7 +27,7 @@ Translation framework or Apple Intelligence. Nothing is sent to any server.*
 ## Kurulum (kendi Mac'inde)
 
 ```bash
-git clone https://github.com/<kullanici>/Translator.git
+git clone https://github.com/cryptooth/macTranslator.git
 cd Translator
 ./build.sh install      # derler, /Applications'a kopyalar ve başlatır
 ```
