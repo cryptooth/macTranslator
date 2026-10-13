@@ -15,8 +15,9 @@ Translation framework or Apple Intelligence. Nothing is sent to any server.*
 - ⌨️ **Sistem geneli kısayol** (varsayılan ⌃⌥T, değiştirilebilir, açılıp kapatılabilir) ve isteğe bağlı **⌘C ⌘C**
 - 🌐 **Otomatik dil algılama** — metin ana dilinizde değilse ona, zaten ana dilinizdeyse ikinci dile çevirir
 - 📋 **Kopyala** (⌘↩) ve **Değiştir** (⇧⌘↩): seçili metni doğrudan çeviriyle değiştirir
-- 🪶 Menü çubuğu popover'ı — Dock simgesi ya da ayrı pencere yok; başka yere tıklayınca kapanır
-- 📌 Sabitleme, girişte başlatma, pano içeriğini koruyan seçim okuma
+- 🪶 Menü çubuğu paneli — Dock simgesi yok; başka yere tıklayınca kapanır, kenarlarından boyutlandırılır
+- 🪟 **Koparılabilir** — paneli sürükleyin (veya ⧉) ve her zaman üstte duran ayrı bir pencere olsun
+- Girişte başlatma, pano içeriğini koruyan seçim okuma
 
 ## Gereksinimler
 
@@ -50,7 +51,8 @@ Popover'daki **İzin ver…** düğmesi bu sayfayı doğrudan açar.
 | **⇧⌘↩** | Kaynak uygulamadaki seçili metni çeviriyle değiştir |
 | **Esc** | Kapat |
 
-- Simgeye **sol tık**: çeviri kutusu · **sağ tık**: kısayolu aç/kapat, Ayarlar, Çıkış
+- Simgeye **sol tık**: çeviri paneli · **sağ tık**: kısayolu aç/kapat, Ayrı Pencere, Ayarlar, Çıkış
+- Paneli tutup sürükleyince menü çubuğundan kopar ve ayrı pencere olur; ⧉ düğmesiyle geri bağlanır
 - Bir dil çifti ilk kez kullanıldığında macOS dil paketini indirmek için onay ister.
   Paketler: Sistem Ayarları → Genel → Dil ve Bölge → Çeviri Dilleri
 
@@ -75,7 +77,7 @@ alıcı tarafında Sistem Ayarları → Gizlilik ve Güvenlik → **Yine de Aç*
 Sources/
   Main.swift                    giriş noktası (menü çubuğu uygulaması)
   AppDelegate.swift             kısayol, ⌘C⌘C izleme, gizli Düzen menüsü
-  PanelController.swift         menü çubuğu simgesi + popover
+  PanelController.swift         menü çubuğu simgesi + boyutlandırılabilir/koparılabilir panel
   TranslatorView.swift          SwiftUI çeviri arayüzü (.translationTask)
   TranslatorModel.swift         dil algılama ve çeviri akışı
   SettingsView.swift            ayarlar + kısayol kaydedici
@@ -84,6 +86,7 @@ Sources/
   Languages.swift               dil listesi / algılama
   IntelligenceTranslator.swift  Apple Intelligence motoru
 Info.plist
+icon.icns                       uygulama ikonu
 build.sh                        yerel derleme / kurulum
 release.sh                      Developer ID imza + notarization
 ```

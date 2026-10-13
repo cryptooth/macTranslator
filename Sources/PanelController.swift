@@ -2,14 +2,34 @@ import AppKit
 import SwiftUI
 import Carbon.HIToolbox
 
-/// Menü çubuğu simgesi + altında açılan popover (ayrı pencere yok).
-@MainActor
-final class PopoverController: NSObject, NSPopoverDelegate {
-    let model = TranslatorModel()
-    private let popover = NSPopover()
-    private var statusItem: NSStatusItem!
+/// Esc ile kapanan panel.
+final class TranslatorPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
 
-    var isShown: Bool { popover.isShown }
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown, event.keyCode == UInt16(kVK_Escape) {
+            orderOut(nil)
+            return
+        }
+        super.sendEvent(event)
+    }
+}
+
+/// Menü çubuğu simgesi + altında açılan, boyutlandırılabilir ve koparılabilir panel.
+///  • Bağlı mod: simgenin altında açılır, başka yere tıklayınca kapanır.
+///  • Kopuk mod: sürükleyerek (veya ⧉ düğmesiyle) ayrılır, her zaman üstte duran normal pencere olur.
+@MainActor
+final class MenuBarController: NSObject, NSWindowDelegate {
+    let model = TranslatorModel()
+    private var statusItem: NSStatusItem!
+    private var panel: TranslatorPanel!
+
+    private static let sizeKey = "panelSize"
+    private static let defaultSize = NSSize(width: 460, height: 440)
+    private static let minSize = NSSize(width: 380, height: 320)
+
+    var isShown: Bool { panel?.isVisible ?? false }
 
     func setup() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -20,14 +40,7 @@ final class PopoverController: NSObject, NSPopoverDelegate {
             button.action = #selector(statusClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
-
-        let root = RootView(model: model, onReplace: { [weak self] in self?.replaceSelection() })
-        let host = NSHostingController(rootView: root)
-        popover.contentViewController = host
-        popover.contentSize = NSSize(width: RootView.size.width, height: RootView.size.height)
-        popover.behavior = .transient          // dışarı tıklayınca kapanır
-        popover.animates = true
-        popover.delegate = self
+        panel = makePanel()
     }
 
     // MARK: Gösterme / kapatma
@@ -42,17 +55,14 @@ final class PopoverController: NSObject, NSPopoverDelegate {
     }
 
     func present() {
-        guard let button = statusItem.button else { return }
         model.axTrusted = SelectionGrabber.isTrusted
+        if !model.isDetached { positionUnderStatusItem() }
         NSApp.activate()
-        if !popover.isShown {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-        }
-        popover.contentViewController?.view.window?.makeKey()
+        panel.makeKeyAndOrderFront(nil)
     }
 
     func close() {
-        popover.close()   // delegate'e sormadan kapatır
+        panel.orderOut(nil)
     }
 
     @objc func openSettings() {
@@ -67,12 +77,104 @@ final class PopoverController: NSObject, NSPopoverDelegate {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(text, forType: .string)
-        close()
+        if !model.isDetached { close() }
         _ = app.activate(options: [])
         Task {
             try? await Task.sleep(nanoseconds: 250_000_000)
             SelectionGrabber.postKey(CGKeyCode(kVK_ANSI_V), flags: .maskCommand)
         }
+    }
+
+    func toggleDetach() {
+        setDetached(!model.isDetached)
+        if !model.isDetached { positionUnderStatusItem() }
+    }
+
+    // MARK: Panel
+
+    private func makePanel() -> TranslatorPanel {
+        let p = TranslatorPanel(
+            contentRect: NSRect(origin: .zero, size: savedSize()),
+            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+            backing: .buffered, defer: false)
+        p.titleVisibility = .hidden
+        p.titlebarAppearsTransparent = true
+        p.isMovableByWindowBackground = true
+        p.isReleasedWhenClosed = false
+        p.hidesOnDeactivate = false
+        p.level = .floating
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        p.minSize = Self.minSize
+        p.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        p.standardWindowButton(.zoomButton)?.isHidden = true
+        p.delegate = self
+
+        let root = RootView(
+            model: model,
+            onReplace: { [weak self] in self?.replaceSelection() },
+            onToggleDetach: { [weak self] in self?.toggleDetach() })
+        let host = NSHostingView(rootView: root)
+        host.sizingOptions = []          // boyutu pencere belirlesin
+        p.contentView = host
+        panel = p
+        applyMode()
+        return p
+    }
+
+    private func setDetached(_ detached: Bool) {
+        guard model.isDetached != detached else { return }
+        model.isDetached = detached
+        applyMode()
+    }
+
+    private func applyMode() {
+        // Kopuk modda kapatma düğmesi görünsün
+        panel?.standardWindowButton(.closeButton)?.isHidden = !model.isDetached
+    }
+
+    private func positionUnderStatusItem() {
+        guard let button = statusItem.button, let win = button.window else {
+            panel.center()
+            return
+        }
+        let anchor = win.convertToScreen(button.convert(button.bounds, to: nil))
+        let vf = (win.screen ?? NSScreen.main)?.visibleFrame ?? .zero
+        let size = panel.frame.size
+        var x = anchor.midX - size.width / 2
+        x = min(max(x, vf.minX + 8), vf.maxX - size.width - 8)
+        var y = anchor.minY - size.height - 6
+        y = max(y, vf.minY + 8)
+        panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    private func savedSize() -> NSSize {
+        if let s = UserDefaults.standard.string(forKey: Self.sizeKey) {
+            let size = NSSizeFromString(s)
+            if size.width >= Self.minSize.width, size.height >= Self.minSize.height { return size }
+        }
+        return Self.defaultSize
+    }
+
+    // MARK: NSWindowDelegate
+
+    /// Yalnızca kullanıcı sürüklediğinde çağrılır → panel koparılır.
+    func windowWillMove(_ notification: Notification) {
+        if !model.isDetached { setDetached(true) }
+    }
+
+    /// Bağlı moddayken başka yere tıklanınca kapan (dil paketi onayı sürerken değil).
+    func windowDidResignKey(_ notification: Notification) {
+        guard !model.isDetached, !model.isWorking else { return }
+        panel.orderOut(nil)
+    }
+
+    func windowDidEndLiveResize(_ notification: Notification) {
+        UserDefaults.standard.set(NSStringFromSize(panel.frame.size), forKey: Self.sizeKey)
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        panel.orderOut(nil)
+        return false
     }
 
     // MARK: Simge tıklaması
@@ -82,11 +184,10 @@ final class PopoverController: NSObject, NSPopoverDelegate {
             showContextMenu()
             return
         }
-        if popover.isShown {
+        if panel.isVisible {
             close()
         } else {
             model.showSettings = false
-            // Önceki uygulamayı "Değiştir" için hatırla
             let front = NSWorkspace.shared.frontmostApplication
             if let app = front, app.bundleIdentifier != Bundle.main.bundleIdentifier {
                 model.sourceApp = app
@@ -103,6 +204,10 @@ final class PopoverController: NSObject, NSPopoverDelegate {
         hk.target = self
         hk.state = s.hotKeyEnabled ? .on : .off
         menu.addItem(hk)
+        let detach = NSMenuItem(title: "Ayrı Pencere", action: #selector(menuToggleDetach), keyEquivalent: "")
+        detach.target = self
+        detach.state = model.isDetached ? .on : .off
+        menu.addItem(detach)
         menu.addItem(.separator())
         let settings = NSMenuItem(title: "Ayarlar…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
@@ -119,27 +224,44 @@ final class PopoverController: NSObject, NSPopoverDelegate {
         HotKeyManager.shared.registerFromSettings()
     }
 
-    // Sabitliyse ya da çeviri (dil paketi onayı) sürüyorsa dışarı tıklamada kapanma
-    func popoverShouldClose(_ popover: NSPopover) -> Bool {
-        !(model.pinned || model.isWorking)
+    @objc private func menuToggleDetach() {
+        toggleDetach()
+        present()
     }
 }
 
-/// Popover içeriği: çeviri ↔ ayarlar
+/// Panel içeriği: üst tutamak + çeviri ↔ ayarlar
 struct RootView: View {
-    static let size = CGSize(width: 460, height: 440)
-
     @ObservedObject var model: TranslatorModel
     var onReplace: () -> Void
+    var onToggleDetach: () -> Void
 
     var body: some View {
-        Group {
-            if model.showSettings {
-                SettingsView(onBack: { model.showSettings = false })
-            } else {
-                TranslatorView(model: model, onReplace: onReplace)
+        VStack(spacing: 0) {
+            // Başlık çubuğu alanı: bağlıyken sürükleme tutamağı, kopukken başlık
+            ZStack {
+                if model.isDetached {
+                    Text("Translator")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                } else {
+                    Capsule()
+                        .fill(Color.secondary.opacity(0.35))
+                        .frame(width: 36, height: 5)
+                        .help("Ayrı pencere yapmak için sürükleyin")
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 24)
+
+            Group {
+                if model.showSettings {
+                    SettingsView(onBack: { model.showSettings = false })
+                } else {
+                    TranslatorView(model: model, onReplace: onReplace, onToggleDetach: onToggleDetach)
+                }
             }
         }
-        .frame(width: Self.size.width, height: Self.size.height)
+        .frame(minWidth: 380, maxWidth: .infinity, minHeight: 320, maxHeight: .infinity)
     }
 }

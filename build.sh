@@ -31,6 +31,7 @@ xcrun swiftc -O -parse-as-library \
   -o "$APP/Contents/MacOS/Translator"
 
 cp Info.plist "$APP/Contents/Info.plist"
+[ -f icon.icns ] && cp icon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 # İmzalama: Apple Development sertifikası varsa onu kullan (Erişilebilirlik izni yeniden derlemede korunur),
 # yoksa ad-hoc imza (her derlemeden sonra izni yeniden vermek gerekir).
@@ -53,6 +54,7 @@ if [ "${1:-}" = "install" ]; then
   sleep 0.5
   rm -rf /Applications/Translator.app
   ditto "$APP" /Applications/Translator.app
+  touch /Applications/Translator.app   # Finder ikon önbelleğini tazele
   open /Applications/Translator.app
   echo "✓ /Applications/Translator.app kuruldu ve başlatıldı"
 fi

@@ -13,7 +13,8 @@ final class TranslatorModel: ObservableObject {
     @Published var isWorking = false
     @Published var status: String?
     @Published var errorMessage: String?
-    @Published var pinned = false
+    /// Panel menü çubuğundan koparılıp ayrı pencere olduysa true
+    @Published var isDetached = false
     @Published var copied = false
     @Published var showSettings = false
     @Published var axTrusted = SelectionGrabber.isTrusted

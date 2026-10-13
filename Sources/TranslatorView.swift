@@ -4,6 +4,7 @@ import Translation
 struct TranslatorView: View {
     @ObservedObject var model: TranslatorModel
     var onReplace: () -> Void
+    var onToggleDetach: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 10) {
@@ -13,7 +14,9 @@ struct TranslatorView: View {
             resultBox
             footer
         }
-        .padding(14)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 14)
+        .padding(.top, 2)
         .translationTask(model.config) { session in
             await model.perform(with: session)
         }
@@ -48,12 +51,13 @@ struct TranslatorView: View {
             .labelsHidden()
             .frame(maxWidth: .infinity)
 
-            Toggle(isOn: $model.pinned) {
-                Image(systemName: model.pinned ? "pin.fill" : "pin")
+            Button {
+                onToggleDetach()
+            } label: {
+                Image(systemName: model.isDetached ? "pip.enter" : "pip.exit")
             }
-            .toggleStyle(.button)
             .buttonStyle(.borderless)
-            .help("Sabitle (başka yere tıklayınca kapanmasın)")
+            .help(model.isDetached ? "Menü çubuğuna geri bağla" : "Ayrı pencere olarak kopar")
 
             Button {
                 model.showSettings = true

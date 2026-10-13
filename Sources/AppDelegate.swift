@@ -5,7 +5,7 @@ import ApplicationServices
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let popover = PopoverController()
+    private let popover = MenuBarController()
     private var globalKeyMonitor: Any?
     private var lastCopyTime = Date.distantPast
 
@@ -83,7 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "Ayarlar…", action: #selector(PopoverController.openSettings), keyEquivalent: ",").target = popover
+        appMenu.addItem(withTitle: "Ayarlar…", action: #selector(MenuBarController.openSettings), keyEquivalent: ",").target = popover
         appMenu.addItem(withTitle: "Çıkış", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         main.addItem(appItem)

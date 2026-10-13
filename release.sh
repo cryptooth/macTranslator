@@ -51,6 +51,7 @@ done
 lipo -create -output "$APP/Contents/MacOS/Translator" "${SLICES[@]}"
 rm -f "$DIST"/Translator-*
 cp Info.plist "$APP/Contents/Info.plist"
+[ -f icon.icns ] && cp icon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 echo "▸ İmzalanıyor (hardened runtime + timestamp)"
 codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
